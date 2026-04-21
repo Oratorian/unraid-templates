@@ -6,7 +6,7 @@
   <GitHub>https://github.com/Oratorian/emby-watchparty</GitHub>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
-  <Support>REPLACE_ME_WITH_UNRAID_FORUM_THREAD_URL</Support>
+  <Support>https://forums.unraid.net/topic/198376-support-emby-watchparty-watch-party-for-emby-synchronized-playback/</Support>
   <Project>https://github.com/Oratorian/emby-watchparty</Project>
   <Overview>A synchronized watch party application for Emby media servers. Watch videos together with friends in real-time, no matter where you are! All media streaming is proxied through the Flask app, keeping your Emby server safely on your internal network.</Overview>
   <Category>MediaApp:Video MediaServer:Video Network:Other Status:Stable</Category>
