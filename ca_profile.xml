@@ -1,0 +1,13 @@
+<CommunityApplications>
+  <Profile>
+    Open-source projects from Oratorian. Currently maintaining emby-watchparty, a synchronized watch-party frontend for Emby media servers that lets you watch videos with friends in real time without giving them Emby accounts. The Emby server stays on your local network, the watch party app proxies HLS streams to guests, and play/pause/seek stay synchronized across every viewer. For support, please use the linked Unraid forum thread (preferred) or open an issue on GitHub.
+  </Profile>
+  <Icon>https://raw.githubusercontent.com/Oratorian/emby-watchparty/main/static/favicon.ico</Icon>
+  <WebPage>https://github.com/Oratorian</WebPage>
+  <!-- Optional support links -->
+  <Forum>https://forums.unraid.net/topic/198376-support-emby-watchparty-watch-party-for-emby-synchronized-playback/</Forum>
+  <Discord>https://discord.gg/RWUpxq9xsA</Discord>
+  <!-- Optional profile extras -->
+  <DonateLink>https://ko-fi.com/jedziah</DonateLink>
+  <DonateText>Support development on Ko-fi</DonateText>
+</CommunityApplications>
