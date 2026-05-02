@@ -12,7 +12,7 @@
   <Category>MediaApp:Video MediaServer:Video Network:Other Status:Stable</Category>
   <Requires>A running Emby server reachable from this container, plus an Emby API key and the username/password of an Emby user with library access. Emby Premiere is required on the Emby side for hardware-accelerated transcoding (QSV, NVENC, VAAPI).</Requires>
   <WebUI>http://[IP]:[PORT:5000]</WebUI>
-   <TemplateURL>https://raw.githubusercontent.com/Oratorian/emby-watchparty/refs/heads/main/unraid/emby-watchparty.xml</TemplateURL>
+   <TemplateURL>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty/emby-watchparty.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/Oratorian/emby-watchparty/main/static/favicon.ico</Icon>
   <ExtraParams/>
   <PostArgs/>
