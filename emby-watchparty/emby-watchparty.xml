@@ -13,7 +13,7 @@
   <Requires>A running Emby server reachable from this container and an admin-level Emby API key (Emby Dashboard &gt; Advanced &gt; API Keys). Per-user authentication is an in-app action -- any party member clicks "Login to Become Host" and supplies their own Emby credentials, so no long-lived user creds are stored on disk. Emby Premiere is required on the Emby side for hardware-accelerated transcoding (QSV, NVENC, VAAPI).</Requires>
   <WebUI>http://[IP]:[PORT:5000]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty/emby-watchparty.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/Oratorian/emby-watchparty/main/frontend/public/favicon.ico</Icon>
+  <Icon>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty/emby-watchparty-icon.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <Shell>sh</Shell>

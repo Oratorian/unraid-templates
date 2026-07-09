@@ -13,7 +13,7 @@
   <Requires>A running Emby server reachable from this container, plus an Emby API key and the username/password of an Emby user with library access. Emby Premiere is required on the Emby side for hardware-accelerated transcoding (QSV, NVENC, VAAPI). NOTE: this template pins the `:legacy` image tag (v1.6.x line). For the current 2.0 release, install the `emby-watchparty` template instead.</Requires>
   <WebUI>http://[IP]:[PORT:5000]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty-legacy/emby-watchparty-legacy.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/Oratorian/emby-watchparty/legacy/static/favicon.ico</Icon>
+  <Icon>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty-legacy/emby-watchparty-icon.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <Shell>sh</Shell>
