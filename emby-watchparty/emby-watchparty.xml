@@ -8,115 +8,82 @@
   <Privileged>false</Privileged>
   <Support>https://forums.unraid.net/topic/198376-support-emby-watchparty-watch-party-for-emby-synchronized-playback/</Support>
   <Project>https://github.com/Oratorian/emby-watchparty</Project>
-  <Overview>A synchronized watch party application for Emby media servers. Watch videos together with friends in real-time, no matter where you are! All media streaming is proxied through the Flask app, keeping your Emby server safely on your internal network.</Overview>
+  <Overview>A synchronized watch party application for Emby media servers. Vue 3 SPA + FastAPI backend with per-user HLS transcodes, late-joiner voting, in-party admin panel, and drift correction. All streaming is proxied through the container so your Emby server can stay on your internal network. Only boot-essential values are set here; everything else (logging, security, rate limits, late-join vote, static session, force-transcode, etc.) is managed live via the /admin panel and persisted to config.json.</Overview>
   <Category>MediaApp:Video MediaServer:Video Network:Other Status:Stable</Category>
-  <Requires>A running Emby server reachable from this container, plus an Emby API key and the username/password of an Emby user with library access. Emby Premiere is required on the Emby side for hardware-accelerated transcoding (QSV, NVENC, VAAPI).</Requires>
+  <Requires>A running Emby server reachable from this container and an admin-level Emby API key (Emby Dashboard &gt; Advanced &gt; API Keys). Per-user authentication is an in-app action -- any party member clicks "Login to Become Host" and supplies their own Emby credentials, so no long-lived user creds are stored on disk. Emby Premiere is required on the Emby side for hardware-accelerated transcoding (QSV, NVENC, VAAPI).</Requires>
   <WebUI>http://[IP]:[PORT:5000]</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/Oratorian/emby-watchparty/main/static/favicon.ico</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty/emby-watchparty.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Oratorian/emby-watchparty/main/frontend/public/favicon.ico</Icon>
   <ExtraParams/>
   <PostArgs/>
   <Shell>sh</Shell>
   <Beta>False</Beta>
 
-  <!-- Port -->
+  <!-- ================= Port ================= -->
   <Config Name="Web UI Port" Target="5000" Default="5000" Mode="tcp"
-          Description="Port for the emby-watchparty web interface."
+          Description="Host port for the emby-watchparty web interface. Must match WATCH_PARTY_PORT below."
           Type="Port" Display="always" Required="true" Mask="false">5000</Config>
 
-  <!-- Required environment variables -->
+  <!-- ================= Emby (required) ================= -->
   <Config Name="Emby Server URL" Target="EMBY_SERVER_URL" Default="http://192.168.1.x:8096"
-          Description="Full URL to your Emby server, e.g. http://192.168.1.100:8096"
+          Description="Full URL to your Emby server, e.g. http://192.168.1.100:8096. Reachable from inside this container."
           Type="Variable" Display="always" Required="true" Mask="false">http://192.168.1.x:8096</Config>
 
   <Config Name="Emby API Key" Target="EMBY_API_KEY" Default=""
-          Description="Your Emby API key. Generate one in Emby Dashboard > Advanced > API Keys."
+          Description="Admin Emby API key. Generate one in Emby Dashboard &gt; Advanced &gt; API Keys. Per-user credentials are NOT set here -- users log in from inside the party UI."
           Type="Variable" Display="always" Required="true" Mask="true"></Config>
 
-  <Config Name="Emby Username" Target="EMBY_USERNAME" Default=""
-          Description="Emby username used to authenticate and proxy HLS streams."
-          Type="Variable" Display="always" Required="true" Mask="false"></Config>
+  <!-- ================= Session cookie (required) ================= -->
+  <Config Name="Session Secret" Target="SESSION_SECRET" Default="change-me-openssl-rand-hex-32"
+          Description="Signing key for the party-bound session cookie. Generate ONCE with `openssl rand -hex 32` and leave it -- must persist across restarts and across every uvicorn worker. If left at the default, an ephemeral key is generated at boot with a loud warning; fine for local dev, catastrophic in production (every restart kicks everyone out)."
+          Type="Variable" Display="always" Required="true" Mask="true">change-me-openssl-rand-hex-32</Config>
 
-  <Config Name="Emby Password" Target="EMBY_PASSWORD" Default=""
-          Description="Password for the Emby user above."
-          Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="Session Cookie Secure" Target="SESSION_COOKIE_SECURE" Default="false"
+          Description="When `true`, the session cookie carries the Secure flag so browsers only send it over HTTPS. Set `true` for every deployment behind TLS; leave `false` for local http://localhost dev (setting it true on an http origin locks users out)."
+          Type="Variable" Display="always" Required="true" Mask="false">false</Config>
 
-  <!-- ================= Application options ================= -->
+  <!-- ================= Network bind ================= -->
+  <Config Name="Bind Address" Target="WATCH_PARTY_BIND" Default="0.0.0.0"
+          Description="Interface the app listens on inside the container. 0.0.0.0 listens on all interfaces (typical for Docker); rarely needs changing."
+          Type="Variable" Display="advanced" Required="false" Mask="false">0.0.0.0</Config>
+
+  <Config Name="Container Port" Target="WATCH_PARTY_PORT" Default="5000"
+          Description="Port the app binds inside the container. Must match the container-side of the Web UI Port mapping above."
+          Type="Variable" Display="advanced" Required="false" Mask="false">5000</Config>
+
+  <!-- ================= Reverse proxy ================= -->
   <Config Name="App Prefix" Target="APP_PREFIX" Default=""
-          Description="URL prefix for reverse proxy deployments (e.g. /watchparty). Leave empty for root deployment."
+          Description="URL prefix for reverse-proxy deployments behind a subpath (e.g. /watchparty). Leave empty for root-of-domain deployments. Backend routers, Socket.IO, /assets, and the SPA all honour the prefix at runtime -- no rebuild required."
           Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
 
-  <Config Name="Require Login" Target="REQUIRE_LOGIN" Default="false"
-          Description="Require Emby login to access the web UI (true/false). Leave false for open guest access."
-          Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="CORS Allowed Origins" Target="CORS_ALLOWED_ORIGINS" Default="*"
+          Description="Comma-separated origin allowlist for the Socket.IO server. `*` accepts XHR-poll handshakes from any origin -- convenient for testing but pair with per-IP throttling. Pin to your real origin(s) for a proper deployment, e.g. `https://watchparty.example.com,https://staging.example.com`."
+          Type="Variable" Display="advanced" Required="false" Mask="false">*</Config>
 
+  <!-- ================= Session lifetime ================= -->
   <Config Name="Session Expiry (seconds)" Target="SESSION_EXPIRY" Default="86400"
-          Description="Session expiry in seconds. Default 86400 (24 hours)."
+          Description="Session cookie lifetime in seconds. Default 86400 (24 hours)."
           Type="Variable" Display="advanced" Required="false" Mask="false">86400</Config>
 
-  <Config Name="Static Session Enabled" Target="STATIC_SESSION_ENABLED" Default="false"
-          Description="Keep a single persistent party alive across restarts (true/false). Users navigating to / are redirected straight into the party."
-          Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <!-- ================= Volumes ================= -->
+  <!-- Avatar persistence: SQLite DB + uploaded images. Required so
+       avatars survive a container recreate. -->
+  <Config Name="Avatar Database" Target="/app/data" Default="/mnt/user/appdata/emby-watchparty/data"
+          Description="Persists the avatars.db SQLite database. Without this mount, every container recreate wipes every member's chosen avatar."
+          Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty/data</Config>
 
-  <Config Name="Static Session ID" Target="STATIC_SESSION_ID" Default="PARTY"
-          Description="Fixed party ID used when Static Session Enabled is true. Uppercase."
-          Type="Variable" Display="advanced" Required="false" Mask="false">PARTY</Config>
+  <Config Name="Avatar Images" Target="/app/images/avatars" Default="/mnt/user/appdata/emby-watchparty/avatars"
+          Description="Persists uploaded avatar image files. Paired with the Avatar Database mount above."
+          Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty/avatars</Config>
 
-  <!-- ================= Logging ================= -->
-  <Config Name="Log Level" Target="LOG_LEVEL" Default="INFO"
-          Description="Logging level: DEBUG, INFO, WARNING, or ERROR."
-          Type="Variable" Display="advanced" Required="false" Mask="false">INFO</Config>
+  <!-- Admin config: everything set via /admin lives here. -->
+  <Config Name="Admin Config (config.json)" Target="/app/config.json" Default="/mnt/user/appdata/emby-watchparty/config.json"
+          Description="Persists the runtime admin config (edited via /admin) across container recreates. IMPORTANT: `touch config.json` on the host BEFORE the first start, otherwise Docker silently creates it as an empty DIRECTORY and the backend fails to write."
+          Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty/config.json</Config>
 
-  <Config Name="Console Log Level" Target="CONSOLE_LOG_LEVEL" Default="WARNING"
-          Description="Log level for stdout/console output. Default WARNING keeps Docker logs quiet."
-          Type="Variable" Display="advanced" Required="false" Mask="false">WARNING</Config>
-
-  <Config Name="Log To File" Target="LOG_TO_FILE" Default="false"
-          Description="Set to false (recommended for Docker) to output logs to stdout only. Set to true to write logs to a file inside the container."
-          Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
-
-  <Config Name="Log File Path" Target="LOG_FILE" Default="logs/emby-watchparty.log"
-          Description="Path to the log file inside the container. Only used when Log To File is true."
-          Type="Variable" Display="advanced" Required="false" Mask="false">logs/emby-watchparty.log</Config>
-
-  <Config Name="Log Max Size (MB)" Target="LOG_MAX_SIZE" Default="10"
-          Description="Maximum size of the log file in megabytes before rotation."
-          Type="Variable" Display="advanced" Required="false" Mask="false">10</Config>
-
-  <!-- ================= Security ================= -->
-  <Config Name="Max Users Per Party" Target="MAX_USERS_PER_PARTY" Default="0"
-          Description="Maximum users per watch party. 0 means unlimited."
-          Type="Variable" Display="advanced" Required="false" Mask="false">0</Config>
-
-  <Config Name="Enable HLS Token Validation" Target="ENABLE_HLS_TOKEN_VALIDATION" Default="true"
-          Description="Validate HLS stream tokens so only party members can fetch segments (true/false)."
-          Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
-
-  <Config Name="HLS Token Expiry (seconds)" Target="HLS_TOKEN_EXPIRY" Default="86400"
-          Description="How long HLS tokens remain valid, in seconds. Default 86400 (24 hours)."
-          Type="Variable" Display="advanced" Required="false" Mask="false">86400</Config>
-
-  <Config Name="Enable Rate Limiting" Target="ENABLE_RATE_LIMITING" Default="true"
-          Description="Enable per-IP rate limiting on API endpoints (true/false)."
-          Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
-
-  <Config Name="Rate Limit: Party Creations Per Hour" Target="RATE_LIMIT_PARTY_CREATION" Default="5"
-          Description="Maximum party creations per IP per hour."
-          Type="Variable" Display="advanced" Required="false" Mask="false">5</Config>
-
-  <Config Name="Rate Limit: API Calls Per Minute" Target="RATE_LIMIT_API_CALLS" Default="1000"
-          Description="Maximum API calls per IP per minute."
-          Type="Variable" Display="advanced" Required="false" Mask="false">1000</Config>
-
-  <!-- ================= Paths ================= -->
-  <!-- Optional: mount a .env file instead of / in addition to individual vars -->
-  <Config Name="ENV File Path (optional)" Target="/app/.env" Default="/mnt/user/appdata/emby-watchparty/.env"
-          Description="Optional: mount a .env file into the container. If set, values in this file will be used. Individual env vars above take precedence."
-          Type="Path" Display="advanced" Required="false" Mode="ro">/mnt/user/appdata/emby-watchparty/.env</Config>
-
-  <!-- App data / config volume -->
-  <Config Name="App Config Directory" Target="/app/config" Default="/mnt/user/appdata/emby-watchparty"
-          Description="Path on the host where emby-watchparty will store any persistent config or state."
-          Type="Path" Display="advanced" Required="false" Mode="rw">/mnt/user/appdata/emby-watchparty</Config>
+  <!-- Optional: logs to disk. Only useful when LOG_TO_FILE is enabled in /admin. -->
+  <Config Name="Logs (optional)" Target="/app/logs" Default="/mnt/user/appdata/emby-watchparty/logs"
+          Description="Optional: persist application logs to disk. Only writes when Log To File is enabled in the /admin panel (default: console-only)."
+          Type="Path" Display="advanced" Required="false" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty/logs</Config>
 
 </Container>
