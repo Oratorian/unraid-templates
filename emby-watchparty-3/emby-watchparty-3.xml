@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Container version="2">
+  <Name>emby-watchparty-3</Name>
+  <Repository>ghcr.io/oratorian/emby-watchparty:3</Repository>
+  <Registry>https://ghcr.io/oratorian/emby-watchparty</Registry>
+  <GitHub>https://github.com/Oratorian/emby-watchparty</GitHub>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://forums.unraid.net/topic/198376-support-emby-watchparty-watch-party-for-emby-synchronized-playback/</Support>
+  <Project>https://github.com/Oratorian/emby-watchparty</Project>
+  <Overview>Emby Watch Party 3.x, Director's Cut, for Emby and Jellyfin media servers. Guests watch together without media-server accounts, with their own audio, subtitles, quality, and HLS stream. Includes library search and filters, title details, synchronized playback, late-join voting, chat, and runtime administration. The :3 image stays on stable 3.x. This is a separate installation from the 2.x template, with its own appdata and host port. Production requires an HTTPS reverse proxy, explicit public origins, a stable session secret, and the current MEDIA_SERVER_* settings. Read the migration guide before moving an existing installation. GPU passthrough and hardware transcoding are configured on Emby or Jellyfin, which runs FFmpeg.</Overview>
+  <Category>MediaApp:Video MediaServer:Video Network:Other Status:Stable</Category>
+  <Requires>A running Emby or Jellyfin server reachable from this container, a dedicated administrative API key issued by that server, and an HTTPS public URL routed to Watch Party. Generate SESSION_SECRET once with openssl rand -hex 32 and retain it. Set the public Web UI URL and matching CORS origin, and identify the reverse proxy's actual connecting address for TRUSTED_PROXY_CIDRS. Before first start, create the appdata directories and config.json containing {} as a file; keep existing configuration when migrating. Use one application worker. The :3 image must be published before installing this stable template. Deployment: https://github.com/Oratorian/emby-watchparty/wiki/Deployment-Unraid . Migration: https://github.com/Oratorian/emby-watchparty/wiki/Migration-to-3.0 .</Requires>
+  <!-- The required public URL label supplies Unraid's HTTPS Web UI launcher. -->
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty-3/emby-watchparty-3.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Oratorian/unraid-templates/refs/heads/main/emby-watchparty/emby-watchparty-icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <Shell>sh</Shell>
+  <Beta>False</Beta>
+
+  <!-- Public access and host port. Container-side port remains 5000. -->
+  <Config Name="Public HTTPS Web UI" Target="net.unraid.docker.webui" Default=""
+          Description="Full public HTTPS URL for the Unraid Web UI launcher, for example https://watchparty.example.com or https://example.com/watchparty/. Include APP_PREFIX when used. The reverse proxy routes this URL to the host port below; the container itself serves HTTP."
+          Type="Label" Display="always" Required="true" Mask="false"></Config>
+
+  <Config Name="Web UI Host Port" Target="5000" Default="5001" Mode="tcp"
+          Description="Published host port for Watch Party 3.x. Default 5001 avoids the 2.x template's 5000. Change this host value if needed; keep container port and WATCH_PARTY_PORT at 5000. Point your reverse proxy at this host port."
+          Type="Port" Display="always" Required="true" Mask="false">5001</Config>
+
+  <!-- Media-server provider. User account credentials are entered in the app. -->
+  <Config Name="Media Server Type" Target="MEDIA_SERVER_TYPE" Default="emby|jellyfin"
+          Description="Select the configured provider. MEDIA_SERVER_URL and MEDIA_SERVER_API_KEY must belong to that same Emby or Jellyfin server. Changing providers requires container recreation. Jellyfin playback uses HLS; progressive files, Live TV, and SyncPlay are outside the supported path."
+          Type="Variable" Display="always" Required="true" Mask="false">emby</Config>
+
+  <Config Name="Media Server URL" Target="MEDIA_SERVER_URL" Default=""
+          Description="HTTP(S) media-server URL reachable from this container, for example http://192.168.1.100:8096. localhost means this container. A service hostname needs a shared Docker network with name resolution."
+          Type="Variable" Display="always" Required="true" Mask="false"></Config>
+
+  <Config Name="Media Server API Key" Target="MEDIA_SERVER_API_KEY" Default=""
+          Description="Dedicated administrative API key issued by the selected media server. Host usernames/passwords are entered through Watch Party, not here. Masking hides this field in the editor; server administrators can still read container environment values."
+          Type="Variable" Display="always" Required="true" Mask="true"></Config>
+
+  <!-- Required production session and proxy settings. -->
+  <Config Name="Session Secret" Target="SESSION_SECRET" Default=""
+          Description="Stable signing secret of at least 32 characters. Generate once with openssl rand -hex 32 and paste the result. Keep it across updates; changing it invalidates signed cookies. Do not reuse a placeholder or leave it blank."
+          Type="Variable" Display="always" Required="true" Mask="true"></Config>
+
+  <Config Name="Session Cookie Secure" Target="SESSION_COOKIE_SECURE" Default="true|false"
+          Description="Production requires true and an HTTPS browser URL. HTTP between your TLS reverse proxy and this container is allowed. false is only for a separately configured development deployment."
+          Type="Variable" Display="always" Required="true" Mask="false">true</Config>
+
+  <Config Name="Allowed Public Origins" Target="CORS_ALLOWED_ORIGINS" Default=""
+          Description="Comma-separated public origins, for example https://watchparty.example.com. Include scheme and any nondefault public port, without a path or trailing slash. For https://example.com/watchparty/ use https://example.com. Production rejects blank values and *."
+          Type="Variable" Display="always" Required="true" Mask="false"></Config>
+
+  <Config Name="Behind Reverse Proxy" Target="BEHIND_PROXY" Default="true|false"
+          Description="Declare whether a reverse proxy terminates viewer connections. Normally true for this HTTPS deployment, which requires TRUSTED_PROXY_CIDRS. Set false only for a genuinely direct topology; it does not remove production's HTTPS and secure-cookie requirements."
+          Type="Variable" Display="always" Required="true" Mask="false">true</Config>
+
+  <Config Name="Trusted Proxy CIDRs" Target="TRUSTED_PROXY_CIDRS" Default=""
+          Description="Required when Behind Reverse Proxy is true. Comma-separated CIDRs for the proxy's actual connecting address as Watch Party sees it, such as its Docker-network address. Use the narrowest relevant networks; do not trust all private networks or 0.0.0.0/0. Leave blank only for a direct deployment."
+          Type="Variable" Display="always" Required="false" Mask="false"></Config>
+
+  <!-- Boot settings, applied only when the container is recreated. -->
+  <Config Name="Deployment Mode" Target="APP_ENV" Default="production"
+          Description="Production enables strict startup checks for secrets, secure cookies, explicit origins, proxy topology, and HLS token validation. Keep production for this stable deployment."
+          Type="Variable" Display="advanced-hide" Required="true" Mask="false">production</Config>
+
+  <Config Name="Container Bind Address" Target="WATCH_PARTY_BIND" Default="0.0.0.0"
+          Description="Keep 0.0.0.0 inside the container so the published port and reverse proxy can reach it. This is not the Unraid host address."
+          Type="Variable" Display="advanced-hide" Required="true" Mask="false">0.0.0.0</Config>
+
+  <Config Name="Container Port" Target="WATCH_PARTY_PORT" Default="5000"
+          Description="Keep the container-side port at 5000. Change only Web UI Host Port to select a different published host port."
+          Type="Variable" Display="advanced-hide" Required="true" Mask="false">5000</Config>
+
+  <Config Name="HLS Token Validation" Target="ENABLE_HLS_TOKEN_VALIDATION" Default="true"
+          Description="Production requires true. This is a restart-required boot setting in 3.x, no longer an admin toggle. An old disabled config.json value is overridden by this environment setting."
+          Type="Variable" Display="advanced-hide" Required="true" Mask="false">true</Config>
+
+  <Config Name="App Prefix" Target="APP_PREFIX" Default=""
+          Description="Optional path such as /watchparty. Leave blank for a dedicated hostname. The proxy must preserve this prefix; include it in Public HTTPS Web UI but not in Allowed Public Origins."
+          Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="Session Expiry (seconds)" Target="SESSION_EXPIRY" Default="86400"
+          Description="Signed session-cookie lifetime, default 86400 seconds (24 hours). Use 1209600 to retain the former 2.x 14-day cookie lifetime. Active party state does not survive a process restart."
+          Type="Variable" Display="advanced" Required="true" Mask="false">86400</Config>
+
+  <!-- Separate appdata defaults allow 2.x and 3.x to coexist. -->
+  <Config Name="Application Data" Target="/app/data" Default="/mnt/user/appdata/emby-watchparty-3/data"
+          Description="Writable application data, including the avatar identity database. Use separate storage from a running 2.x installation; copy a stopped backup only as part of a deliberate migration."
+          Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty-3/data</Config>
+
+  <Config Name="Avatar Images" Target="/app/images/avatars" Default="/mnt/user/appdata/emby-watchparty-3/avatars"
+          Description="Persistent uploaded avatar files. Keep this paired with Application Data when backing up or migrating."
+          Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty-3/avatars</Config>
+
+  <Config Name="Admin Config (config.json)" Target="/app/config.json" Default="/mnt/user/appdata/emby-watchparty-3/config.json"
+          Description="Writable runtime settings file. Before a fresh installation, create this host path as a FILE containing {} if it does not exist. Do not use touch or let Docker create a directory. Preserve an existing config.json when migrating."
+          Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty-3/config.json</Config>
+
+  <Config Name="Logs (optional)" Target="/app/logs" Default="/mnt/user/appdata/emby-watchparty-3/logs"
+          Description="Optional persistent application logs. File logging and console levels are managed in /admin."
+          Type="Path" Display="advanced" Required="false" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty-3/logs</Config>
+</Container>
