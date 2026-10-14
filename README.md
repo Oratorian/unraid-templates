@@ -47,6 +47,8 @@ Full instructions: [Unraid deployment](https://github.com/Oratorian/emby-watchpa
 
 Keep their separate container names, host ports, and appdata paths. Never mount the same live `config.json`, avatar database, or avatar directory into both installations.
 
+An already installed 2.x user template may still have `ghcr.io/oratorian/emby-watchparty:latest` saved in **Repository**. Change that installed value to `ghcr.io/oratorian/emby-watchparty:2` before `:latest` moves to 3.x. Updating this catalog XML does not automatically repin every saved installation.
+
 Use separate public hostnames, such as `watchparty2.example.com` and `watchparty3.example.com`. Both application lines use the `ewp_session` cookie with the root path; different ports or `APP_PREFIX` values on one hostname do not isolate their browser sessions. Separate browser profiles can isolate a local comparison test.
 
 Configure hardware acceleration, GPU device mappings, and device permissions on **Emby or Jellyfin**, which runs FFmpeg. The Watch Party templates do not request GPU devices or privileged mode. Practical steps remain in the wiki's [hardware acceleration guide](https://github.com/Oratorian/emby-watchparty/wiki/Hardware-Requirements#hardware-acceleration).
