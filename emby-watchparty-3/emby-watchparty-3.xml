@@ -22,7 +22,7 @@
 
   <!-- Public access and host port. Container-side port remains 5000. -->
   <Config Name="Public HTTPS Web UI" Target="net.unraid.docker.webui" Default=""
-          Description="Full public HTTPS URL for the Unraid Web UI launcher, for example https://watchparty.example.com or https://example.com/watchparty/. Include APP_PREFIX when used. The reverse proxy routes this URL to the host port below; the container itself serves HTTP."
+          Description="Full public HTTPS URL for the Unraid Web UI launcher, for example https://watchparty.example.com or https://example.com/watchparty/. Include APP_PREFIX when used. The reverse proxy routes this URL to the host port below; the container itself serves HTTP. When retaining 2.x, use a different public hostname: ports and subpaths do not isolate session cookies."
           Type="Label" Display="always" Required="true" Mask="false"></Config>
 
   <Config Name="Web UI Host Port" Target="5000" Default="5001" Mode="tcp"
