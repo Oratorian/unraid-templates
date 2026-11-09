@@ -25,12 +25,23 @@ Template URLs target this repository's `main` branch. Local feature-branch chang
    mkdir -p /mnt/user/appdata/emby-watchparty-3/data \
      /mnt/user/appdata/emby-watchparty-3/avatars \
      /mnt/user/appdata/emby-watchparty-3/logs
-   if [ ! -e /mnt/user/appdata/emby-watchparty-3/config.json ]; then
-     printf '%s\n' '{}' > /mnt/user/appdata/emby-watchparty-3/config.json
+   config=/mnt/user/appdata/emby-watchparty-3/config.json
+   if [ -e "$config" ] && [ ! -f "$config" ]; then
+     printf '%s\n' 'config.json must be a file; correct the host path before starting.' >&2
+     exit 1
+   fi
+   if [ ! -e "$config" ] || [ ! -s "$config" ]; then
+     printf '%s\n' '{}' > "$config"
    fi
    ```
 
-   `config.json` must be a writable file containing valid JSON. Do not use `touch`, and do not replace an existing config or leave a directory at that path.
+   Run preparation with the container stopped. `config.json` must be a writable file
+   containing valid JSON. The command initializes only a missing or zero-byte file;
+   it preserves every nonempty config. Do not use `touch`. If Docker already created
+   a directory at that specific path, inspect and preserve its contents before
+   correcting the path and recreating the container from the template. Do not delete
+   the appdata directory or overwrite existing settings. For the retained 2.x template,
+   use its separate `/mnt/user/appdata/emby-watchparty/config.json` path instead.
 2. Install the **emby-watchparty-3** template. Select `emby` or `jellyfin`; supply a URL reachable from the container and a dedicated administrative API key issued by that same server.
 3. Generate `SESSION_SECRET` once with `openssl rand -hex 32`. Paste the result into the masked field and keep it across updates.
 4. Configure an HTTPS reverse proxy pointing to the chosen host port, default `5001`. Fill **Public HTTPS Web UI** with the complete public URL. Include `APP_PREFIX` if using a subpath.

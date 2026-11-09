@@ -78,7 +78,7 @@
 
   <!-- Admin config: everything set via /admin lives here. -->
   <Config Name="Admin Config (config.json)" Target="/app/config.json" Default="/mnt/user/appdata/emby-watchparty/config.json"
-          Description="Persists the runtime admin config (edited via /admin) across container recreates. IMPORTANT: `touch config.json` on the host BEFORE the first start, otherwise Docker silently creates it as an empty DIRECTORY and the backend fails to write."
+          Description="Persists runtime admin settings across container recreates. Before starting, prepare this host path as a writable FILE containing {} only if it is missing or zero bytes. Do not use touch or let Docker create a directory. Preserve every nonempty config. If the path is a directory, stop and correct that specific mapping before recreating the container; do not delete appdata."
           Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty/config.json</Config>
 
   <!-- Optional: logs to disk. Only useful when LOG_TO_FILE is enabled in /admin. -->

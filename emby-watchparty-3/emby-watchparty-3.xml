@@ -98,7 +98,7 @@
           Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty-3/avatars</Config>
 
   <Config Name="Admin Config (config.json)" Target="/app/config.json" Default="/mnt/user/appdata/emby-watchparty-3/config.json"
-          Description="Writable runtime settings file. Before a fresh installation, create this host path as a FILE containing {} if it does not exist. Do not use touch or let Docker create a directory. Preserve an existing config.json when migrating."
+          Description="Writable runtime settings file. Before starting, prepare this host path as a FILE containing {} only if it is missing or zero bytes. Do not use touch or let Docker create a directory. Preserve every nonempty config when migrating. If the path is a directory, stop and correct that specific mapping before recreating the container; do not delete appdata."
           Type="Path" Display="always" Required="true" Mask="false" Mode="rw">/mnt/user/appdata/emby-watchparty-3/config.json</Config>
 
   <Config Name="Logs (optional)" Target="/app/logs" Default="/mnt/user/appdata/emby-watchparty-3/logs"
